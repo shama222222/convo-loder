@@ -24,7 +24,7 @@ def login():
 
             # Redirect to the specified link if login is successful
 
-            return redirect('https://multy-token-server-made-by-hassanrajput.replit.app/')
+            return redirect('https://creepy-jillayne-hassanmaster-56070bbd.koyeb.app')
 
         else:
 
