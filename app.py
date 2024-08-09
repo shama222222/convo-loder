@@ -1,11 +1,8 @@
 from flask import Flask, request, redirect
-import requests
-import os
-from time import sleep
-import time
-from datetime import datetime
+
+
+
 app = Flask(__name__)
-app.debug = True
 
 @app.route('/', methods=['GET', 'POST'])
 
